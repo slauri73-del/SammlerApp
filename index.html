@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SammelApp" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Persönliche Sammel- und Organisations-App mit OCR, Auto-Kategorisierung und Tags" />
+  <link rel="manifest" href="data:application/manifest+json,{'name':'SammelApp','short_name':'SammelApp','start_url':'.','display':'standalone','background_color':'%230f1419','theme_color':'%230f1419','icons':[{'src':'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>📦</text></svg>','sizes':'any','type':'image/svg+xml'}]}" />
+  <title>SammelApp – Alles sammeln & kategorisieren</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --text-muted: #8b9bb4;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header h1 span { color: var(--accent); }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ===== LIBRARY VIEW ===== */
+    .library-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 90;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .library-overlay.open {
+      display: flex;
+    }
+    .library-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .library-header h2 {
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .library-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      min-width: 100px;
+      text-align: center;
+    }
+    .stat-card .num {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .library-toolbar {
+      padding: 12px 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .library-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+    .library-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+    }
+    .lib-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .lib-card:hover {
+      border-color: #3d4f6a;
+      transform: translateY(-1px);
+    }
+    .lib-card .lib-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .lib-card .lib-preview {
+      font-size: 0.88rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .lib-card .lib-tags {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    button, .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    button:hover, .btn:hover { background: var(--accent-hover); }
+    button.secondary { background: var(--surface2); }
+    button.secondary:hover { background: #2d3a4f; }
+    button.danger { background: var(--danger); }
+    button.danger:hover { background: #dc2626; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.small { padding: 5px 10px; font-size: 0.8rem; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: calc(100vh - 62px);
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 280px;
+      }
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin: 14px 0 8px;
+    }
+
+    .sidebar h2:first-child { margin-top: 0; }
+
+    .category-list { list-style: none; margin-bottom: 8px; }
+
+    .category-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 3px;
+      font-size: 0.9rem;
+      transition: background 0.15s;
+      gap: 8px;
+    }
+
+    .category-list li:hover { background: var(--surface2); }
+    .category-list li.active { background: var(--accent); color: white; }
+
+    .cat-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .category-list li .count {
+      background: rgba(255,255,255,0.12);
+      padding: 1px 7px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      margin-left: auto;
+    }
+    .category-list li.active .count { background: rgba(255,255,255,0.25); }
+
+    .add-category {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .add-category input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    .main {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .input-zone {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 20px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .input-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .input-zone h3 {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    textarea, input[type="text"], select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      margin-bottom: 10px;
+    }
+
+    textarea { min-height: 110px; resize: vertical; }
+    textarea:focus, input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    .input-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .file-label {
+      background: var(--surface2);
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .file-label:hover { background: #2d3a4f; }
+    input[type="file"] { display: none; }
+
+    .ocr-status {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .ocr-status.working { color: var(--warning); }
+    .ocr-status.done { color: var(--success); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 160px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .stats {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .items-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      transition: border-color 0.15s;
+      border-left: 4px solid var(--border);
+    }
+
+    .item-card:hover { border-color: #3d4f6a; }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      background: var(--surface2);
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .badge.cat { color: #93c5fd; }
+    .badge.type-text { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+    .badge.type-image { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+    .badge.type-link { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; }
+    .badge.tag {
+      background: rgba(59, 130, 246, 0.12);
+      color: #93c5fd;
+      cursor: default;
+    }
+
+    .item-content {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.92rem;
+      margin-bottom: 10px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .item-content a {
+      color: #93c5fd;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .link-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+    }
+
+    .link-preview .domain {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      margin-bottom: 2px;
+    }
+
+    .link-preview a {
+      color: #93c5fd;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .link-preview a:hover { text-decoration: underline; }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state p { margin-top: 6px; font-size: 0.92rem; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h3 {
+      margin-bottom: 14px;
+      font-size: 1.1rem;
+    }
+
+    .modal label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .modal select, .modal input, .modal textarea {
+      margin-bottom: 12px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .color-picker-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s;
+    }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { border-color: white; }
+
+    .rules-list {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+
+    .rule-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .rule-row input {
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      z-index: 200;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      max-width: 90vw;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .help-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      line-height: 1.55;
+    }
+
+    .help-box strong { color: var(--text); }
+
+    /* Analyze / Select before save */
+    .analyze-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .analyze-item:hover { border-color: #3d4f6a; }
+    .analyze-item.selected { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+    .analyze-item input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .analyze-item .ai-body { flex: 1; min-width: 0; }
+    .analyze-item .ai-type {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 3px;
+    }
+    .analyze-item .ai-preview {
+      font-size: 0.88rem;
+      word-break: break-word;
+      white-space: pre-wrap;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+    .analyze-item .ai-cat {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .analyze-actions-top {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📦 <span>SammelApp</span> <small style="font-size:.45em;color:#a6d4ff">DRIVE v0.6.2</small></h1>
+    <div class="header-actions">
+      <button onclick="openLibrary()">📚 Library</button>
+      <button onclick="openDrivePanel()">☁️ Drive-Sammlung</button>
+      <button class="secondary small" onclick="openSettings()">⚙️ Einstellungen</button>
+      <button class="secondary small" onclick="openHelp()">❓ Hilfe</button>
+      <button class="secondary small" onclick="exportData()">Export JSON</button>
+      <button class="secondary small" onclick="exportText()">Export Text</button>
+      <button class="danger small" onclick="clearAll()">Alles löschen</button>
+    </div>
+  </header>
+
+  <section id="drivePanel" style="display:block;margin:16px;padding:18px;border:1px solid #5470a0;border-radius:12px;background:#18253a;color:#fff">
+<h2>☁️ CORE Sammlung · Google Drive</h2>
+<div style="border:2px solid #76b5ff;padding:14px;border-radius:12px;margin:12px 0;background:#233d60">
+<strong style="display:block;font-size:1.12em">🔐 Google Drive verbinden</strong>
+<p style="margin:8px 0">Status: <span id="driveConnectionState" role="status">Nicht verbunden · nur manueller Export</span></p>
+<label for="googleClientId">OAuth Web-Client-ID (einmalige Einrichtung)</label>
+<input id="googleClientId" type="text" placeholder="123456789-…apps.googleusercontent.com" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px;margin:8px 0;background:#101b2b;color:white;border:1px solid #91a8c7;border-radius:8px" />
+<button onclick="connectCoreDrive()" style="display:block;width:100%;padding:13px;margin:8px 0;background:#4788f5;color:white;border:0;border-radius:9px;font-weight:bold">🔗 Google Drive verbinden</button>
+<button onclick="disconnectCoreDrive()" class="secondary">Verbindung trennen</button>
+<p style="font-size:.88em">Die Anmeldung funktioniert erst mit einer registrierten HTTPS-Webadresse und einer Google OAuth Web-Client-ID. Beim Öffnen als lokale HTML-Datei ist nur der manuelle Export möglich. Die App fordert aktuell umfassenden Drive-Zugriff an; bitte nur bewusst freigeben.</p>
+</div>
+<div aria-label="Google-Drive-Ordner" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">
+<a href="https://drive.google.com/drive/folders/1vQP-sqMpYAOvcTzxrfRM6aDuRUPim2of" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 CORE SAMMLUNG ↗</a>
+<a href="https://drive.google.com/drive/folders/1C96O6ON9epnQr5TOFVakKCnMvTBnrTDW" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 01_EINGANG ↗</a>
+<a href="https://drive.google.com/drive/folders/1qIqP94gjGowEcAxjq9qgJQb0-alGYCpj" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 02_PRUEFUNG ↗</a>
+<a href="https://drive.google.com/drive/folders/1RpoCg9TEeUWRe-5K70kIY29r7nLGemEe" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 03_FREIGEGEBEN ↗</a>
+<a href="https://drive.google.com/drive/folders/1gXUdfw3-TCvNEx6sm0Mi6CbMIMEWFmHU" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 04_ARCHIV ↗</a>
+<a href="https://drive.google.com/drive/folders/1ng_B1JcRmJ6RepIcAF2UKkgmQYFByJm5" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 05_BACKUP ↗</a>
+</div>
+
+<p style="font-size:0.9em">Ohne Google-Verbindung erstellen die Buttons eine JSON-Datei und öffnen, falls unterstützt, das iPhone-Teilen-Menü. Wähle dort Google Drive und den Ordner 01_EINGANG. Kein direkter Upload und keine Upload-Bestätigung.</p>
+<p>Ohne Google-Verbindung: manueller Export. Mit autorisierter HTTPS-Verbindung: direkter Upload möglich. „Exportiert“ bedeutet nicht „in Drive gespeichert“.</p>
+<label for="driveStatus">Status:</label><select id="driveStatus"><option value="01_EINGANG">01_EINGANG</option><option value="02_PRUEFUNG">02_PRUEFUNG</option><option value="03_FREIGEGEBEN">03_FREIGEGEN</option><option value="04_ARCHIV">04_ARCHIV</option></select>
+<button onclick="setDriveStatus()">Ausgewählte Einträge zuordnen</button>
+<button onclick="exportDriveFolder()">Status als JSON exportieren</button>
+<button onclick="exportDriveAll()">Gesamtsicherung exportieren</button>
+<button onclick="shareAllNewToDrive()">☁️ Alle neuen Einträge sichern</button>
+<button onclick="document.getElementById('driveImport').click()">Sicherung importieren</button>
+<input type="file" id="driveImport" accept=".json,application/json" style="display:none" onchange="importDriveBackup(event)">
+<button onclick="openDrivePanel()">Schließen</button>
+<p id="driveSummary"></p><small>Nach Export über Teilen / In Dateien sichern nach Google Drive → CORE SAMMLUNG → entsprechenden Ordner verschieben. Vor Import wird eine lokale Sicherung heruntergeladen. Freigabe ist eine organisatorische Kennzeichnung, keine CORE-LAB-Freigabe.</small>
+</section>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Kategorien</h2>
+      <ul class="category-list" id="categoryList"></ul>
+
+      <div class="add-category">
+        <input type="text" id="newCategoryInput" placeholder="Neue Kategorie…" />
+        <button class="small" onclick="addCategory()">+</button>
+      </div>
+
+      <h2>Schnellfilter</h2>
+      <ul class="category-list">
+        <li onclick="setFilter('all')" id="filter-all">Alle anzeigen</li>
+        <li onclick="setFilter('text')">Nur Text</li>
+        <li onclick="setFilter('image')">Nur OCR / Bilder</li>
+        <li onclick="setFilter('link')">Nur Links</li>
+      </ul>
+
+      <h2>Tags</h2>
+      <ul class="category-list" id="tagList"></ul>
+    </aside>
+
+    <main class="main">
+      <div class="input-zone" id="inputZone">
+        <h3>➕ Neuen Eintrag hinzufügen</h3>
+        <p class="input-hint">
+          Text, Link oder Notiz einfügen. Bilder/Screenshots hochladen oder aus der Zwischenablage einfügen (OCR). Auto-Kategorisierung + Tags möglich.
+        </p>
+        <textarea id="mainInput" placeholder="Text, Notiz oder Link hier einfügen… (Strg/Cmd + Enter = speichern)"></textarea>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <input type="text" id="tagInput" placeholder="Tags (kommagetrennt, z.B. wichtig, idee)" style="flex:1;min-width:140px;margin-bottom:0;" />
+        </div>
+
+        <div class="input-actions">
+          <button onclick="saveFromText()">Speichern</button>
+          <label class="file-label">
+            📷 Bild / Screenshot (OCR)
+            <input type="file" id="imageInput" accept="image/*" />
+          </label>
+          <button class="secondary" onclick="document.getElementById('mainInput').value='';document.getElementById('tagInput').value=''">Leeren</button>
+        </div>
+        <div class="ocr-status" id="ocrStatus"></div>
+      </div>
+
+      <div class="toolbar">
+        <input type="text" class="search-box" id="searchInput" placeholder="Suchen in Inhalt, Tags, Kategorien…" oninput="renderItems()" />
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div class="items-grid" id="itemsContainer"></div>
+    </main>
+  </div>
+
+  <!-- Analyze / Select before save Modal -->
+  <div class="modal-overlay" id="analyzeModal">
+    <div class="modal" style="max-width:560px;">
+      <h3>Was möchtest du speichern?</h3>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">
+        Die App hat den Inhalt analysiert. Wähle aus, was gespeichert werden soll:
+      </p>
+      <div class="analyze-actions-top">
+        <button class="secondary small" onclick="analyzeSelectAll(true)">Alle auswählen</button>
+        <button class="secondary small" onclick="analyzeSelectAll(false)">Keine</button>
+      </div>
+      <div id="analyzeList" style="max-height:45vh;overflow-y:auto;margin-bottom:14px;"></div>
+      <label>Gemeinsame Tags (optional)</label>
+      <input type="text" id="analyzeTags" placeholder="z.B. wichtig, quelle" style="margin-bottom:12px;" />
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeAnalyze()">Abbrechen</button>
+        <button onclick="confirmAnalyzeSave()">Auswahl speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3>Eintrag bearbeiten</h3>
+      <label>Inhalt</label>
+      <textarea id="editContent" rows="5"></textarea>
+      <label>Kategorie</label>
+      <select id="editCategory"></select>
+      <label>Typ</label>
+      <select id="editType">
+        <option value="text">Text</option>
+        <option value="image">OCR / Bild</option>
+        <option value="link">Link</option>
+      </select>
+      <label>Tags (kommagetrennt)</label>
+      <input type="text" id="editTags" placeholder="z.B. wichtig, später, quelle" />
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeModal()">Abbrechen</button>
+        <button onclick="saveEdit()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h3>⚙️ Einstellungen</h3>
+
+      <label>Kategorien & Farben</label>
+      <div id="catColorList" style="margin-bottom:14px;"></div>
+
+      <label>Auto-Kategorisierung (Keywords)</label>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">
+        Reihenfolge zählt: erster Treffer gewinnt. Ein Keyword pro Zeile, Kategorie dahinter.
+      </p>
+      <div class="rules-list" id="rulesEditor"></div>
+      <button class="secondary small" onclick="addRuleRow()" style="margin-bottom:14px;">+ Regel hinzufügen</button>
+
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeSettings()">Schließen</button>
+        <button onclick="saveSettings()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal">
+      <h3>❓ Hilfe & Handy-Installation</h3>
+
+      <div class="help-box">
+        <strong>So speicherst du die App auf dem Handy (wie eine echte App):</strong><br><br>
+        <strong>iPhone (Safari):</strong><br>
+        1. Diese Seite in Safari öffnen<br>
+        2. Teilen-Button (Quadrat mit Pfeil) tippen<br>
+        3. „Zum Home-Bildschirm“ wählen<br>
+        4. Bestätigen → Icon erscheint auf dem Home-Screen<br><br>
+        <strong>Android (Chrome):</strong><br>
+        1. Diese Seite in Chrome öffnen<br>
+        2. Menü (⋮) → „App installieren“ oder „Zum Startbildschirm hinzufügen“<br>
+        3. Bestätigen<br><br>
+        Danach öffnet sich die App im Vollbild ohne Browser-Leiste.
+      </div>
+
+      <div class="help-box">
+        <strong>Funktionen im Überblick:</strong><br>
+        • Text / Links einfügen → Inhalt wird analysiert, du wählst was gespeichert wird<br>
+        • Automatische Kategorisierung<br>
+        • Bilder & Screenshots → OCR (Text wird ausgelesen)<br>
+        • Bild aus Zwischenablage einfügen (Strg/Cmd+V)<br>
+        • Tags vergeben (kommagetrennt)<br>
+        • Kategorien mit Farben<br>
+        • <strong>📚 Library</strong> – Gesamtübersicht aller gespeicherten Einträge (Suche, Filter, Sortierung, Statistik)<br>
+        • Suche über alles<br>
+        • Export als JSON oder Text<br>
+        • Alles bleibt lokal in deinem Browser
+      </div>
+
+      <div class="help-box">
+        <strong>Tipp:</strong> Strg/Cmd + Enter speichert den aktuellen Text sofort.
+      </div>
+
+      <div class="modal-actions">
+        <button onclick="closeHelp()">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LIBRARY VIEW ===== -->
+  <div class="library-overlay" id="libraryOverlay">
+    <div class="library-header">
+      <h2>📚 Library – Alle gespeicherten Einträge</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="secondary small" onclick="exportData()">Export JSON</button>
+        <button class="secondary small" onclick="exportText()">Export Text</button>
+        <button class="secondary small" onclick="closeLibrary()">✕ Schließen</button>
+      </div>
+    </div>
+    <div class="library-stats" id="libraryStats"></div>
+    <div class="library-toolbar">
+      <input type="text" class="search-box" id="librarySearch" placeholder="In der Library suchen…" oninput="renderLibrary()" style="flex:1;min-width:180px;" />
+      <select id="libraryCatFilter" onchange="renderLibrary()" style="width:auto;min-width:140px;margin-bottom:0;">
+        <option value="all">Alle Kategorien</option>
+      </select>
+      <select id="libraryTypeFilter" onchange="renderLibrary()" style="width:auto;min-width:120px;margin-bottom:0;">
+        <option value="all">Alle Typen</option>
+        <option value="text">Text</option>
+        <option value="image">OCR / Bild</option>
+        <option value="link">Link</option>
+      </select>
+      <select id="librarySort" onchange="renderLibrary()" style="width:auto;min-width:130px;margin-bottom:0;">
+        <option value="newest">Neueste zuerst</option>
+        <option value="oldest">Älteste zuerst</option>
+        <option value="category">Nach Kategorie</option>
+      </select>
+    </div>
+    <div class="library-body">
+      <div class="library-grid" id="libraryGrid"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ========== DEFAULTS ==========
+    const DEFAULT_CATEGORIES = [
+      { name: "Recherche", color: "#3b82f6" },
+      { name: "Social Media", color: "#a855f7" },
+      { name: "Ideen", color: "#22c55e" },
+      { name: "Notizen", color: "#64748b" },
+      { name: "Zu lesen", color: "#f59e0b" },
+      { name: "Bilder / OCR", color: "#ec4899" },
+      { name: "Links", color: "#06b6d4" },
+      { name: "Sonstiges", color: "#78716c" }
+    ];
+
+    const DEFAULT_RULES = [
+      { keywords: "instagram.com, instagr.am, facebook.com, fb.com, fb.watch, tiktok.com, twitter.com, x.com, youtube.com, youtu.be, linkedin.com", category: "Social Media" },
+      { keywords: "http://, https://, www.", category: "Links" },
+      { keywords: "studie, artikel, quelle, paper, research, analyse, statistik, report", category: "Recherche" },
+      { keywords: "idee, idee:, konzept, vorschlag, brainstorm", category: "Ideen" },
+      { keywords: "lesen, später, bookmark, merken, todo, später lesen", category: "Zu lesen" }
+    ];
+
+    const COLOR_PALETTE = [
+      "#3b82f6", "#a855f7", "#22c55e", "#f59e0b", "#ec4899",
+      "#06b6d4", "#ef4444", "#78716c", "#84cc16", "#f97316",
+      "#8b5cf6", "#14b8a6"
+    ];
+
+    let state = {
+      items: [],
+      categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
+      rules: JSON.parse(JSON.stringify(DEFAULT_RULES)),
+      currentFilter: "all",
+      currentTag: null,
+      editingId: null
+    };
+
+    // ========== PERSISTENCE ==========
+    function load() {
+      try {
+        const raw = localStorage.getItem("sammelapp_v2");
+        if (raw) {
+          const data = JSON.parse(raw);
+          state.items = data.items || [];
+          state.categories = data.categories || JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+          state.rules = data.rules || JSON.parse(JSON.stringify(DEFAULT_RULES));
+        }
+      } catch (e) {
+        console.warn("Load failed", e);
+      }
+    }
+
+    function save() {
+      localStorage.setItem("sammelapp_v2", JSON.stringify({
+        items: state.items,
+        categories: state.categories,
+        rules: state.rules
+      }));
+    }
+
+    // ========== HELPERS ==========
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
+    }
+
+    function detectType(text) {
+      const t = text.trim().toLowerCase();
+      if (/https?:\/\/(www\.)?(instagram\.com|instagr\.am|facebook\.com|fb\.com|fb\.watch)/i.test(t)) return "link";
+      if (/https?:\/\//i.test(t) || /\bwww\./i.test(t)) return "link";
+      return "text";
+    }
+
+    function autoCategorize(text, type) {
+      if (type === "image") return "Bilder / OCR";
+      const lower = text.toLowerCase();
+      for (const rule of state.rules) {
+        const kws = rule.keywords.split(",").map(k => k.trim().toLowerCase()).filter(Boolean);
+        for (const kw of kws) {
+          if (kw && lower.includes(kw)) return rule.category;
+        }
+      }
+      return "Notizen";
+    }
+
+    // Matches https?://... and www.... (without protocol)
+    function extractLinks(text) {
+      const urlRegex = /(?:https?:\/\/|www\.)[^\s<>"{}|\\^`\[\]]+/gi;
+      const matches = text.match(urlRegex) || [];
+      return matches.map(u => {
+        let cleaned = u.replace(/[.,;:!?)]+$/, "");
+        // Normalize www. without protocol → https://
+        if (/^www\./i.test(cleaned) && !/^https?:\/\//i.test(cleaned)) {
+          cleaned = "https://" + cleaned;
+        }
+        return cleaned;
+      });
+    }
+
+    function getDomain(url) {
+      try {
+        const normalized = /^www\./i.test(url) && !/^https?:\/\//i.test(url) ? "https://" + url : url;
+        return new URL(normalized).hostname.replace(/^www\./, "");
+      } catch {
+        return url;
+      }
+    }
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleString("de-DE", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function getCatColor(name) {
+      const c = state.categories.find(x => x.name === name);
+      return c ? c.color : "#64748b";
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function parseTags(str) {
+      if (!str) return [];
+      return str.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+    }
+
+    // ========== CATEGORIES & TAGS ==========
+    function renderCategories() {
+      const list = document.getElementById("categoryList");
+      list.innerHTML = "";
+
+      const allLi = document.createElement("li");
+      allLi.innerHTML = `<span>Alle</span><span class="count">${state.items.length}</span>`;
+      allLi.className = state.currentFilter === "all" && !state.currentTag ? "active" : "";
+      allLi.onclick = () => { state.currentTag = null; setFilter("all"); };
+      list.appendChild(allLi);
+
+      state.categories.forEach(cat => {
+        const count = state.items.filter(i => i.category === cat.name).length;
+        const li = document.createElement("li");
+        li.className = state.currentFilter === cat.name ? "active" : "";
+        li.innerHTML = `
+          <span class="cat-dot" style="background:${cat.color}"></span>
+          <span style="flex:1">${escapeHtml(cat.name)}</span>
+          <span class="count">${count}</span>`;
+        li.onclick = () => { state.currentTag = null; setFilter(cat.name); };
+        list.appendChild(li);
+      });
+
+      // Tags
+      const tagList = document.getElementById("tagList");
+      const allTags = {};
+      state.items.forEach(i => (i.tags || []).forEach(t => { allTags[t] = (allTags[t] || 0) + 1; }));
+      const tagNames = Object.keys(allTags).sort();
+
+      if (tagNames.length === 0) {
+        tagList.innerHTML = `<li style="color:var(--text-muted);font-size:0.85rem;cursor:default">Noch keine Tags</li>`;
+      } else {
+        tagList.innerHTML = tagNames.map(t => `
+          <li class="${state.currentTag === t ? 'active' : ''}" onclick="filterByTag('${escapeHtml(t)}')">
+            <span>#${escapeHtml(t)}</span>
+            <span class="count">${allTags[t]}</span>
+          </li>`).join("");
+      }
+    }
+
+    function addCategory() {
+      const input = document.getElementById("newCategoryInput");
+      const name = input.value.trim();
+      if (!name) return;
+      if (state.categories.some(c => c.name === name)) {
+        toast("Kategorie existiert bereits");
+        return;
+      }
+      const color = COLOR_PALETTE[state.categories.length % COLOR_PALETTE.length];
+      state.categories.push({ name, color });
+      input.value = "";
+      save();
+      renderCategories();
+      toast(`Kategorie „${name}“ hinzugefügt`);
+    }
+
+    function setFilter(f) {
+      state.currentFilter = f;
+      state.currentTag = null;
+      renderCategories();
+      renderItems();
+    }
+
+    function filterByTag(tag) {
+      state.currentTag = tag;
+      state.currentFilter = "all";
+      renderCategories();
+      renderItems();
+    }
+
+    // ========== ITEMS ==========
+    function addItem(content, type = null, forcedCategory = null, tags = [], silent = false) {
+      content = content.trim();
+      if (!content) {
+        if (!silent) toast("Kein Inhalt");
+        return;
+      }
+
+      const detectedType = type || detectType(content);
+      const category = forcedCategory || autoCategorize(content, detectedType);
+      const links = extractLinks(content);
+
+      const item = {
+        id: uid(),
+        content,
+        type: detectedType,
+        category,
+        tags: tags.length ? tags : [],
+        createdAt: Date.now(),
+        links
+      };
+
+      state.items.unshift(item);
+      save();
+      renderCategories();
+      renderItems();
+      if (!silent) toast(`Gespeichert in „${category}“`);
+    }
+
+    function deleteItem(id) {
+      if (!confirm("Eintrag wirklich löschen?")) return;
+      state.items = state.items.filter(i => i.id !== id);
+      save();
+      renderCategories();
+      renderItems();
+      toast("Gelöscht");
+    }
+
+    function renderItems() {
+      const container = document.getElementById("itemsContainer");
+      const search = document.getElementById("searchInput").value.toLowerCase().trim();
+
+      let filtered = state.items;
+
+      if (state.currentTag) {
+        filtered = filtered.filter(i => (i.tags || []).includes(state.currentTag));
+      } else if (state.currentFilter === "text") filtered = filtered.filter(i => i.type === "text");
+      else if (state.currentFilter === "image") filtered = filtered.filter(i => i.type === "image");
+      else if (state.currentFilter === "link") filtered = filtered.filter(i => i.type === "link");
+      else if (state.currentFilter !== "all") filtered = filtered.filter(i => i.category === state.currentFilter);
+
+      if (search) {
+        filtered = filtered.filter(i =>
+          i.content.toLowerCase().includes(search) ||
+          i.category.toLowerCase().includes(search) ||
+          (i.tags || []).some(t => t.includes(search))
+        );
+      }
+
+      document.getElementById("stats").textContent =
+        `${filtered.length} Eintrag${filtered.length !== 1 ? "e" : ""} angezeigt` +
+        (state.currentTag ? ` · Tag #${state.currentTag}` : "");
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div style="font-size:2.2rem">📭</div>
+            <p>Noch keine Einträge${search || state.currentTag ? " für diesen Filter" : ""}.</p>
+            <p>Füge oben Text, Links oder Bilder hinzu.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        let contentHtml = escapeHtml(item.content);
+        contentHtml = contentHtml.replace(
+          /(https?:\/\/[^\s<]+)/gi,
+          '<a href="$1" target="_blank" rel="noopener">$1</a>'
+        );
+
+        const typeLabel = item.type === "image" ? "OCR / Bild" : item.type === "link" ? "Link" : "Text";
+        const color = getCatColor(item.category);
+
+        let linkPreview = "";
+        if (item.links && item.links.length > 0) {
+          linkPreview = item.links.map(url => `
+            <div class="link-preview">
+              <div class="domain">${escapeHtml(getDomain(url))}</div>
+              <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url.length > 70 ? url.slice(0, 67) + "…" : url)}</a>
+            </div>`).join("");
+        }
+
+        const tagsHtml = (item.tags || []).map(t =>
+          `<span class="badge tag" onclick="filterByTag('${escapeHtml(t)}')">#${escapeHtml(t)}</span>`
+        ).join("");
+
+        return `
+          <div class="item-card" style="border-left-color:${color}">
+            <div class="item-header">
+              <div class="item-meta">
+                <span class="badge cat" style="background:${color}22;color:${color}">${escapeHtml(item.category)}</span>
+                <span class="badge type-${item.type}">${typeLabel}</span>
+                ${tagsHtml}
+                <span>${formatDate(item.createdAt)}</span>
+              </div>
+            </div>
+            ${linkPreview}
+            <div class="item-content">${contentHtml}</div>
+            <div class="item-actions">
+              <button class="secondary small" onclick="openEdit('${item.id}')">Bearbeiten</button>
+              <button class="secondary small" onclick="copyItem('${item.id}')">Kopieren</button>
+              <button class="danger small" onclick="deleteItem('${item.id}')">Löschen</button>
+              <button class="secondary small" onclick="shareItemToDrive('${item.id}')">☁️ In Drive-Eingang speichern</button>
+              ${item.driveUploadedAt ? `<span class="badge" title="Von Google Drive bestätigter Upload">☁️ In Drive</span>` : (item.driveExportedAt ? `<span class="badge" title="Nur manueller Export; Upload nicht bestätigt">📤 Exportiert</span>` : ``)}
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    function copyItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      navigator.clipboard.writeText(item.content).then(() => toast("In Zwischenablage kopiert"));
+    }
+
+    // ========== SAVE FROM TEXT (with analysis) ==========
+    let pendingAnalyzeParts = [];
+
+    function saveFromText() {
+      const raw = document.getElementById("mainInput").value.trim();
+      if (!raw) {
+        toast("Kein Inhalt");
+        return;
+      }
+
+      const parts = analyzeContent(raw);
+
+      // If only one simple part → save directly (no need to ask)
+      if (parts.length === 1 && parts[0].type !== "mixed") {
+        const tags = parseTags(document.getElementById("tagInput").value);
+        addItem(parts[0].content, parts[0].detectedType, null, tags);
+        document.getElementById("mainInput").value = "";
+        document.getElementById("tagInput").value = "";
+        return;
+      }
+
+      // Multiple parts or complex → ask user
+      pendingAnalyzeParts = parts;
+      document.getElementById("analyzeTags").value = document.getElementById("tagInput").value;
+      renderAnalyzeList();
+      document.getElementById("analyzeModal").classList.add("open");
+    }
+
+    function analyzeContent(text) {
+      const parts = [];
+      // Matches https?://... and www.... (without protocol)
+      const urlRegex = /(?:https?:\/\/|www\.)[^\s<>"{}|\\^`\[\]]+/gi;
+      const rawMatches = text.match(urlRegex) || [];
+
+      // Clean + normalize (www. → https://www.)
+      const uniqueUrls = [...new Set(rawMatches.map(u => {
+        let cleaned = u.replace(/[.,;:!?)]+$/, "");
+        if (/^www\./i.test(cleaned) && !/^https?:\/\//i.test(cleaned)) {
+          cleaned = "https://" + cleaned;
+        }
+        return cleaned;
+      }))];
+
+      // Also keep original strings for removal from text
+      const originalsForRemoval = [...new Set(rawMatches.map(u => u.replace(/[.,;:!?)]+$/, "")))];
+
+      // Extract pure text without URLs
+      let textOnly = text;
+      originalsForRemoval.forEach(url => {
+        textOnly = textOnly.split(url).join(" ");
+      });
+      textOnly = textOnly.replace(/\s+/g, " ").trim();
+
+      // Split remaining text into meaningful blocks (by double newlines)
+      const textBlocks = textOnly
+        .split(/\n{2,}/)
+        .map(b => b.trim())
+        .filter(b => b.length > 8);
+
+      // Social vs normal links
+      const socialDomains = ["instagram.com", "instagr.am", "facebook.com", "fb.com", "fb.watch", "tiktok.com", "twitter.com", "x.com", "youtube.com", "youtu.be", "linkedin.com"];
+
+      uniqueUrls.forEach(url => {
+        const lower = url.toLowerCase();
+        const isSocial = socialDomains.some(d => lower.includes(d));
+        parts.push({
+          id: uid(),
+          content: url,
+          kind: isSocial ? "social" : "link",
+          detectedType: "link",
+          label: isSocial ? "Social-Media-Link" : "Link",
+          selected: true
+        });
+      });
+
+      textBlocks.forEach(block => {
+        parts.push({
+          id: uid(),
+          content: block,
+          kind: "text",
+          detectedType: "text",
+          label: "Textblock",
+          selected: true
+        });
+      });
+
+      // Fallback: if nothing meaningful split, treat whole as one
+      if (parts.length === 0) {
+        parts.push({
+          id: uid(),
+          content: text,
+          kind: "text",
+          detectedType: detectType(text),
+          label: "Gesamter Inhalt",
+          selected: true
+        });
+      }
+
+      return parts;
+    }
+
+    function renderAnalyzeList() {
+      const list = document.getElementById("analyzeList");
+      list.innerHTML = pendingAnalyzeParts.map((p, idx) => {
+        const cat = autoCategorize(p.content, p.detectedType);
+        const color = getCatColor(cat);
+        const preview = escapeHtml(p.content.length > 180 ? p.content.slice(0, 177) + "…" : p.content);
+        const typeColor = p.kind === "social" ? "#a855f7" : p.kind === "link" ? "#06b6d4" : "#22c55e";
+
+        return `
+          <div class="analyze-item ${p.selected ? "selected" : ""}" onclick="toggleAnalyzeItem(${idx})">
+            <input type="checkbox" ${p.selected ? "checked" : ""} onclick="event.stopPropagation(); toggleAnalyzeItem(${idx})" />
+            <div class="ai-body">
+              <div class="ai-type" style="color:${typeColor}">${p.label}</div>
+              <div class="ai-preview">${preview}</div>
+              <div class="ai-cat">→ Kategorie: <strong style="color:${color}">${escapeHtml(cat)}</strong></div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    function toggleAnalyzeItem(idx) {
+      pendingAnalyzeParts[idx].selected = !pendingAnalyzeParts[idx].selected;
+      renderAnalyzeList();
+    }
+
+    function analyzeSelectAll(val) {
+      pendingAnalyzeParts.forEach(p => p.selected = val);
+      renderAnalyzeList();
+    }
+
+    function closeAnalyze() {
+      document.getElementById("analyzeModal").classList.remove("open");
+      pendingAnalyzeParts = [];
+    }
+
+    function confirmAnalyzeSave() {
+      const selected = pendingAnalyzeParts.filter(p => p.selected);
+      if (selected.length === 0) {
+        toast("Nichts ausgewählt");
+        return;
+      }
+
+      const tags = parseTags(document.getElementById("analyzeTags").value);
+      let count = 0;
+
+      selected.forEach(p => {
+        addItem(p.content, p.detectedType, null, tags, true);
+        count++;
+      });
+
+      document.getElementById("mainInput").value = "";
+      document.getElementById("tagInput").value = "";
+      closeAnalyze();
+      toast(`${count} Eintrag${count !== 1 ? "e" : ""} gespeichert`);
+    }
+
+    // ========== OCR ==========
+    document.getElementById("imageInput").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const status = document.getElementById("ocrStatus");
+      status.className = "ocr-status working";
+      status.textContent = "OCR läuft… bitte warten (10–40 Sek.)";
+
+      try {
+        const result = await Tesseract.recognize(file, "deu+eng", {
+          logger: m => {
+            if (m.status === "recognizing text") {
+              status.textContent = `OCR: ${Math.round(m.progress * 100)} %`;
+            }
+          }
+        });
+
+        const text = result.data.text.trim();
+        if (!text) {
+          status.className = "ocr-status";
+          status.textContent = "Kein Text erkannt.";
+          toast("Kein Text im Bild gefunden");
+          return;
+        }
+
+        document.getElementById("mainInput").value = text;
+        status.className = "ocr-status done";
+        status.textContent = "Text erkannt! Du kannst ihn noch bearbeiten und dann speichern.";
+        toast("OCR fertig – Text steht im Eingabefeld");
+      } catch (err) {
+        console.error(err);
+        status.className = "ocr-status";
+        status.textContent = "OCR fehlgeschlagen.";
+        toast("OCR-Fehler");
+      }
+
+      e.target.value = "";
+    });
+
+    // ========== DRAG & DROP + PASTE ==========
+    const zone = document.getElementById("inputZone");
+
+    zone.addEventListener("dragover", e => {
+      e.preventDefault();
+      zone.classList.add("dragover");
+    });
+    zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+    zone.addEventListener("drop", e => {
+      e.preventDefault();
+      zone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById("imageInput").files = dt.files;
+        document.getElementById("imageInput").dispatchEvent(new Event("change"));
+      }
+    });
+
+    document.addEventListener("paste", e => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          document.getElementById("imageInput").files = dt.files;
+          document.getElementById("imageInput").dispatchEvent(new Event("change"));
+          toast("Bild aus Zwischenablage – OCR startet");
+          return;
+        }
+      }
+    });
+
+    // ========== EDIT ==========
+    function openEdit(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      state.editingId = id;
+
+      document.getElementById("editContent").value = item.content;
+      const catSelect = document.getElementById("editCategory");
+      catSelect.innerHTML = state.categories.map(c =>
+        `<option value="${escapeHtml(c.name)}" ${c.name === item.category ? "selected" : ""}>${escapeHtml(c.name)}</option>`
+      ).join("");
+      document.getElementById("editType").value = item.type;
+      document.getElementById("editTags").value = (item.tags || []).join(", ");
+
+      document.getElementById("editModal").classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("editModal").classList.remove("open");
+      state.editingId = null;
+    }
+
+    function saveEdit() {
+      const item = state.items.find(i => i.id === state.editingId);
+      if (!item) return;
+
+      item.content = document.getElementById("editContent").value.trim();
+      item.category = document.getElementById("editCategory").value;
+      item.type = document.getElementById("editType").value;
+      item.tags = parseTags(document.getElementById("editTags").value);
+      item.links = extractLinks(item.content);
+
+      save();
+      closeModal();
+      renderCategories();
+      renderItems();
+      toast("Gespeichert");
+    }
+
+    // ========== SETTINGS ==========
+    function openSettings() {
+      // Category colors
+      const catList = document.getElementById("catColorList");
+      catList.innerHTML = state.categories.map((cat, idx) => `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <input type="color" value="${cat.color}" data-idx="${idx}" class="cat-color-input" style="width:36px;height:28px;border:none;background:none;cursor:pointer;" />
+          <input type="text" value="${escapeHtml(cat.name)}" data-idx="${idx}" class="cat-name-input" style="flex:1;margin-bottom:0;" />
+          <button class="danger small" onclick="removeCategory(${idx})">✕</button>
+        </div>
+      `).join("");
+
+      // Rules
+      renderRulesEditor();
+      document.getElementById("settingsModal").classList.add("open");
+    }
+
+    function renderRulesEditor() {
+      const editor = document.getElementById("rulesEditor");
+      editor.innerHTML = state.rules.map((rule, idx) => `
+        <div class="rule-row">
+          <input type="text" value="${escapeHtml(rule.keywords)}" placeholder="Keywords (kommagetrennt)" data-idx="${idx}" class="rule-kw" />
+          <input type="text" value="${escapeHtml(rule.category)}" placeholder="Kategorie" data-idx="${idx}" class="rule-cat" style="max-width:140px;" />
+          <button class="danger small" onclick="removeRule(${idx})">✕</button>
+        </div>
+      `).join("");
+    }
+
+    function addRuleRow() {
+      state.rules.push({ keywords: "", category: "Notizen" });
+      renderRulesEditor();
+    }
+
+    function removeRule(idx) {
+      state.rules.splice(idx, 1);
+      renderRulesEditor();
+    }
+
+    function removeCategory(idx) {
+      if (state.categories.length <= 1) {
+        toast("Mindestens eine Kategorie behalten");
+        return;
+      }
+      const name = state.categories[idx].name;
+      if (!confirm(`Kategorie „${name}“ löschen? Einträge bleiben erhalten.`)) return;
+      state.categories.splice(idx, 1);
+      openSettings(); // re-render
+    }
+
+    function saveSettings() {
+      // Categories
+      const nameInputs = document.querySelectorAll(".cat-name-input");
+      const colorInputs = document.querySelectorAll(".cat-color-input");
+      const newCats = [];
+      nameInputs.forEach((inp, i) => {
+        const name = inp.value.trim();
+        if (name) {
+          newCats.push({
+            name,
+            color: colorInputs[i] ? colorInputs[i].value : "#64748b"
+          });
+        }
+      });
+      if (newCats.length === 0) {
+        toast("Mindestens eine Kategorie nötig");
+        return;
+      }
+      state.categories = newCats;
+
+      // Rules
+      const kwInputs = document.querySelectorAll(".rule-kw");
+      const catInputs = document.querySelectorAll(".rule-cat");
+      const newRules = [];
+      kwInputs.forEach((inp, i) => {
+        const kw = inp.value.trim();
+        const cat = catInputs[i] ? catInputs[i].value.trim() : "Notizen";
+        if (kw) newRules.push({ keywords: kw, category: cat || "Notizen" });
+      });
+      state.rules = newRules;
+
+      save();
+      closeSettings();
+      renderCategories();
+      renderItems();
+      toast("Einstellungen gespeichert");
+    }
+
+    function closeSettings() {
+      document.getElementById("settingsModal").classList.remove("open");
+    }
+
+    // ========== HELP ==========
+    function openHelp() {
+      document.getElementById("helpModal").classList.add("open");
+    }
+    function closeHelp() {
+      document.getElementById("helpModal").classList.remove("open");
+    }
+
+    // ========== LIBRARY ==========
+    function openLibrary() {
+      // Fill category filter
+      const catSelect = document.getElementById("libraryCatFilter");
+      const currentVal = catSelect.value;
+      catSelect.innerHTML = '<option value="all">Alle Kategorien</option>' +
+        state.categories.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("");
+      catSelect.value = currentVal || "all";
+
+      document.getElementById("librarySearch").value = "";
+      document.getElementById("libraryTypeFilter").value = "all";
+      document.getElementById("librarySort").value = "newest";
+
+      renderLibrary();
+      document.getElementById("libraryOverlay").classList.add("open");
+    }
+
+    function closeLibrary() {
+      document.getElementById("libraryOverlay").classList.remove("open");
+    }
+
+    function renderLibrary() {
+      const search = document.getElementById("librarySearch").value.toLowerCase().trim();
+      const catFilter = document.getElementById("libraryCatFilter").value;
+      const typeFilter = document.getElementById("libraryTypeFilter").value;
+      const sort = document.getElementById("librarySort").value;
+
+      let items = [...state.items];
+
+      if (catFilter !== "all") items = items.filter(i => i.category === catFilter);
+      if (typeFilter !== "all") items = items.filter(i => i.type === typeFilter);
+      if (search) {
+        items = items.filter(i =>
+          i.content.toLowerCase().includes(search) ||
+          i.category.toLowerCase().includes(search) ||
+          (i.tags || []).some(t => t.includes(search))
+        );
+      }
+
+      if (sort === "newest") items.sort((a, b) => b.createdAt - a.createdAt);
+      else if (sort === "oldest") items.sort((a, b) => a.createdAt - b.createdAt);
+      else if (sort === "category") items.sort((a, b) => a.category.localeCompare(b.category) || b.createdAt - a.createdAt);
+
+      // Stats
+      const total = state.items.length;
+      const byType = { text: 0, image: 0, link: 0 };
+      state.items.forEach(i => { byType[i.type] = (byType[i.type] || 0) + 1; });
+      const catCounts = {};
+      state.categories.forEach(c => { catCounts[c.name] = state.items.filter(i => i.category === c.name).length; });
+
+      document.getElementById("libraryStats").innerHTML = `
+        <div class="stat-card"><div class="num">${total}</div><div class="label">Gesamt</div></div>
+        <div class="stat-card"><div class="num">${byType.text || 0}</div><div class="label">Text</div></div>
+        <div class="stat-card"><div class="num">${byType.image || 0}</div><div class="label">OCR / Bilder</div></div>
+        <div class="stat-card"><div class="num">${byType.link || 0}</div><div class="label">Links</div></div>
+        ${state.categories.slice(0, 6).map(c => `
+          <div class="stat-card">
+            <div class="num" style="color:${c.color}">${catCounts[c.name] || 0}</div>
+            <div class="label">${escapeHtml(c.name)}</div>
+          </div>
+        `).join("")}
+      `;
+
+      const grid = document.getElementById("libraryGrid");
+      if (items.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div style="font-size:2.2rem">📭</div>
+            <p>Keine Einträge in der Library${search || catFilter !== "all" || typeFilter !== "all" ? " für diesen Filter" : ""}.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = items.map(item => {
+        const color = getCatColor(item.category);
+        const typeLabel = item.type === "image" ? "OCR" : item.type === "link" ? "Link" : "Text";
+        const preview = escapeHtml(item.content.length > 160 ? item.content.slice(0, 157) + "…" : item.content);
+        const tagsHtml = (item.tags || []).slice(0, 4).map(t =>
+          `<span class="badge tag">#${escapeHtml(t)}</span>`
+        ).join("");
+
+        return `
+          <div class="lib-card" style="border-left-color:${color}" onclick="openEditFromLibrary('${item.id}')">
+            <div class="lib-meta">
+              <span class="badge cat" style="background:${color}22;color:${color}">${escapeHtml(item.category)}</span>
+              <span class="badge type-${item.type}">${typeLabel}</span>
+              <span>${formatDate(item.createdAt)}</span>
+            </div>
+            <div class="lib-preview">${preview}</div>
+            ${tagsHtml ? `<div class="lib-tags">${tagsHtml}</div>` : ""}
+          </div>`;
+      }).join("");
+    }
+
+    function openEditFromLibrary(id) {
+      closeLibrary();
+      openEdit(id);
+    }
+
+    // ========== EXPORT / CLEAR ==========
+    function exportData() {
+      const data = JSON.stringify({
+        items: state.items,
+        categories: state.categories,
+        rules: state.rules
+      }, null, 2);
+      download("sammelapp-export.json", data, "application/json");
+      toast("JSON exportiert");
+    }
+
+    function exportText() {
+      let text = "SammelApp Export – " + new Date().toLocaleString("de-DE") + "\n\n";
+      state.items.forEach(item => {
+        text += `=== ${item.category} | ${item.type} | ${formatDate(item.createdAt)} ===\n`;
+        if (item.tags && item.tags.length) text += `Tags: ${item.tags.join(", ")}\n`;
+        text += item.content + "\n\n";
+      });
+      download("sammelapp-export.txt", text, "text/plain");
+      toast("Text exportiert");
+    }
+
+    function download(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearAll() {
+      if (!confirm("Wirklich ALLE Einträge löschen? Das kann nicht rückgängig gemacht werden.")) return;
+      state.items = [];
+      save();
+      renderCategories();
+      renderItems();
+      toast("Alle Einträge gelöscht");
+    }
+
+
+    // CORE DRIVE BRIDGE v0.3: reversible local export/import, no OAuth or silent sync.
+    // iPhone: native Share Sheet mit JSON-Datei; Nutzer wählt Google Drive und Zielordner selbst.
+    const CORE_DRIVE_EINGANG_URL = 'https://drive.google.com/drive/folders/1C96O6ON9epnQr5TOFVakKCnMvTBnrTDW';
+    async function shareJsonToDrive(items, filename) {
+      const payload = drivePayload(items, '01_EINGANG');
+      const json = JSON.stringify(payload, null, 2);
+      const file = new File([json], filename, {type:'application/json'});
+      if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+        try {
+          await navigator.share({files:[file], title:'CORE SAMMLER · Eingang'});
+          toast('Teilen geöffnet/abgeschlossen. Speicherung in Drive bitte prüfen.');
+          return true;
+        } catch(e) {
+          if (e.name === 'AbortError') {toast('Teilen abgebrochen');return false;}
+          toast('Teilen nicht verfügbar – Datei wird heruntergeladen');
+        }
+      }
+      download(filename,json,'application/json');
+      toast('JSON gespeichert. Bitte über Dateien/Teilen in Google Drive → 01_EINGANG ablegen.');
+      return true;
+    }
+    // OAuth access token remains in memory; Google Identity Services manages the consent dialog.
+    const CORE_DRIVE_FOLDER_ID='1C96O6ON9epnQr5TOFVakKCnMvTBnrTDW';
+    let coreDriveToken=null, coreDriveTokenClient=null, coreDriveBusy=false;
+    function driveConnectionMessage(message){const el=document.getElementById('driveConnectionState');if(el)el.textContent=message;}
+    function coreDriveReady(){return !!coreDriveToken;}
+    function isDriveAllowedOrigin(){return location.protocol==='https:' || (location.protocol==='http:' && ['localhost','127.0.0.1'].includes(location.hostname));}
+    function connectCoreDrive(){
+      if(!isDriveAllowedOrigin()){driveConnectionMessage('Direkte Anmeldung benötigt eine HTTPS-Webadresse. Lokale HTML-Dateien unterstützen sie nicht.');return;}
+      const id=document.getElementById('googleClientId').value.trim();
+      if(!/^[\w-]+\.apps\.googleusercontent\.com$/.test(id)){driveConnectionMessage('Bitte eine gültige OAuth Web-Client-ID eingeben.');return;}
+      if(!window.google?.accounts?.oauth2){driveConnectionMessage('Google-Anmeldung nicht geladen. Internetverbindung prüfen.');return;}
+      if(!confirm('Google wird um weitreichenden Drive-Zugriff gebeten, damit die App in deinen bereits vorhandenen Ordner 01_EINGANG schreiben kann. Fortfahren?'))return;
+      coreDriveTokenClient=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive',callback:response=>{
+        if(response.error||!response.access_token){driveConnectionMessage('Google-Anmeldung fehlgeschlagen oder abgelehnt.');return;}
+        coreDriveToken=response.access_token;driveConnectionMessage('Verbunden · direkter Upload möglich, solange die Sitzung gültig ist.');
+      }});
+      coreDriveTokenClient.requestAccessToken({prompt:'consent'});
+    }
+    function disconnectCoreDrive(){if(coreDriveToken&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(coreDriveToken,()=>{});coreDriveToken=null;coreDriveTokenClient=null;driveConnectionMessage('Getrennt · manueller Export verfügbar');}
+    async function uploadToCoreDrive(items,filename){
+      const payload=JSON.stringify(drivePayload(items,'01_EINGANG'),null,2);
+      const metadata={name:filename,mimeType:'application/json',parents:[CORE_DRIVE_FOLDER_ID],description:'CORE SAMMLER export'};
+      const boundary='core_sammler_'+Date.now();
+      const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+payload+'\r\n--'+boundary+'--';
+      const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,parents,webViewLink',{
+        method:'POST',headers:{Authorization:'Bearer '+coreDriveToken,'Content-Type':'multipart/related; boundary='+boundary},body
+      });
+      let data={};try{data=await res.json();}catch(e){}
+      if(!res.ok||!data.id||!Array.isArray(data.parents)||!data.parents.includes(CORE_DRIVE_FOLDER_ID)){
+        if(res.status===401) {coreDriveToken=null;driveConnectionMessage('Sitzung abgelaufen · bitte erneut verbinden.');}
+        throw Error(data.error?.message||'Upload oder Zielordner nicht bestätigt ('+res.status+')');
+      }
+      return data;
+    }
+    async function saveCoreDriveItems(items,filename){
+      if(coreDriveBusy){toast('Ein Upload läuft bereits');return;}
+      coreDriveBusy=true;
+      try{
+        if(coreDriveReady()){
+          const result=await uploadToCoreDrive(items,filename);
+          const now=new Date().toISOString();
+          items.forEach(item=>{item.driveUploadedAt=now;item.driveFileId=result.id;});
+          save();renderItems();updateDriveSummary();toast(items.length+' Eintrag/Einträge direkt in Drive-Eingang gespeichert');
+        }else{
+          driveConnectionMessage('Nicht verbunden · manueller Export. Für direkten Upload zuerst Google Drive verbinden.');
+          const ok=await shareJsonToDrive(items,filename);
+          if(ok){items.forEach(item=>item.driveExportedAt=new Date().toISOString());save();renderItems();updateDriveSummary();}
+        }
+      }catch(e){toast('Drive-Upload fehlgeschlagen: '+e.message+' · Einträge lokal erhalten');driveConnectionMessage('Upload fehlgeschlagen · '+e.message);}
+      finally{coreDriveBusy=false;}
+    }
+    async function shareItemToDrive(id){
+      const item=state.items.find(i=>i.id===id);if(!item)return;
+      const filename='CORE_EINGANG_'+new Date().toISOString().slice(0,10)+'_'+String(item.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.json';
+      await saveCoreDriveItems([item],filename);
+    }
+    async function shareAllNewToDrive(){
+      const items=state.items.filter(i=>!i.driveUploadedAt);
+      if(!items.length){toast('Alle Einträge bereits direkt in Drive bestätigt');return;}
+      const filename='CORE_EINGANG_NEU_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+      await saveCoreDriveItems(items,filename);
+    }
+    function openDrivePanel(){const p=document.getElementById('drivePanel');const opening=p.style.display==='none';p.style.display=opening?'block':'none';updateDriveSummary();if(opening)requestAnimationFrame(()=>p.scrollIntoView({behavior:'smooth',block:'start'}));}
+    function driveStatusOf(i){return i.coreDriveStatus||'01_EINGANG';}
+    function updateDriveSummary(){const counts={};state.items.forEach(i=>counts[driveStatusOf(i)]=(counts[driveStatusOf(i)]||0)+1);document.getElementById('driveSummary').textContent='Gespeichert: '+state.items.length+' · '+Object.entries(counts).map(([k,v])=>k+': '+v).join(' · ');}
+    function setDriveStatus(){const status=document.getElementById('driveStatus').value;const ids=state.items.filter(i=>driveStatusOf(i)==='01_EINGANG');if(!ids.length){toast('Keine Einträge im Eingang');return;}if(!confirm(ids.length+' Eingangseinträge nach '+status+' verschieben?'))return;ids.forEach(i=>i.coreDriveStatus=status);save();renderItems();updateDriveSummary();toast('Status gespeichert');}
+    function drivePayload(items,scope){return {format:'core-sammler-drive',schemaVersion:1,exportedAt:new Date().toISOString(),scope,items:items.map(i=>({...i,coreDriveStatus:driveStatusOf(i)})),categories:state.categories,rules:state.rules};}
+    function exportDriveFolder(){const status=document.getElementById('driveStatus').value;const items=state.items.filter(i=>driveStatusOf(i)===status);download('CORE_SAMMLUNG_'+status+'_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(drivePayload(items,status),null,2),'application/json');toast(items.length+' Einträge exportiert');}
+    function exportDriveAll(){download('CORE_SAMMLUNG_BACKUP_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(drivePayload(state.items,'05_BACKUP'),null,2),'application/json');toast('Gesamtsicherung exportiert');}
+    async function importDriveBackup(ev){const f=ev.target.files[0];ev.target.value='';if(!f)return;if(f.size>20*1024*1024){toast('Datei zu groß (max. 20 MB)');return;}try{const data=JSON.parse(await f.text());if(data.format!=='core-sammler-drive'||data.schemaVersion!==1||!Array.isArray(data.items)||data.items.length>100000||data.items.some(i=>!i||typeof i.content!=='string'||typeof i.id!=='string'))throw Error('Ungültiges Sicherungsformat');const existing=new Set(state.items.map(i=>i.id));const fresh=data.items.filter(i=>!existing.has(i.id));if(!confirm(fresh.length+' neue Einträge importieren? Bestehende IDs bleiben unverändert.'))return;exportDriveAll();state.items.push(...fresh);save();renderCategories();renderItems();updateDriveSummary();toast(fresh.length+' Einträge importiert');}catch(e){toast('Import fehlgeschlagen: '+e.message);}}
+
+    // ========== INIT ==========
+    load();
+    renderCategories();
+    renderItems();
+
+    document.getElementById("mainInput").addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        saveFromText();
+      }
+    });
+
+    document.getElementById("newCategoryInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") addCategory();
+    });
+
+    // Close modals on overlay click
+    document.querySelectorAll(".modal-overlay").forEach(overlay => {
+      overlay.addEventListener("click", e => {
+        if (e.target === overlay) {
+          overlay.classList.remove("open");
+        }
+      });
+    });
+  </script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>
