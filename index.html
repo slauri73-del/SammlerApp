@@ -679,10 +679,10 @@
 </head>
 <body>
   <header>
-    <h1>📦 <span>SammelApp</span> <small style="font-size:.45em;color:#a6d4ff">DRIVE v0.6.2</small></h1>
+    <h1>📦 <span>SammelApp</span> <small style="font-size:.45em;color:#a6d4ff">LOCAL v0.6.3</small></h1>
     <div class="header-actions">
       <button onclick="openLibrary()">📚 Library</button>
-      <button onclick="openDrivePanel()">☁️ Drive-Sammlung</button>
+      <button onclick="openCollectionPanel()">📦 Lokale Sammlung</button>
       <button class="secondary small" onclick="openSettings()">⚙️ Einstellungen</button>
       <button class="secondary small" onclick="openHelp()">❓ Hilfe</button>
       <button class="secondary small" onclick="exportData()">Export JSON</button>
@@ -691,37 +691,19 @@
     </div>
   </header>
 
-  <section id="drivePanel" style="display:block;margin:16px;padding:18px;border:1px solid #5470a0;border-radius:12px;background:#18253a;color:#fff">
-<h2>☁️ CORE Sammlung · Google Drive</h2>
-<div style="border:2px solid #76b5ff;padding:14px;border-radius:12px;margin:12px 0;background:#233d60">
-<strong style="display:block;font-size:1.12em">🔐 Google Drive verbinden</strong>
-<p style="margin:8px 0">Status: <span id="driveConnectionState" role="status">Nicht verbunden · nur manueller Export</span></p>
-<label for="googleClientId">OAuth Web-Client-ID (einmalige Einrichtung)</label>
-<input id="googleClientId" type="text" placeholder="123456789-…apps.googleusercontent.com" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px;margin:8px 0;background:#101b2b;color:white;border:1px solid #91a8c7;border-radius:8px" />
-<button onclick="connectCoreDrive()" style="display:block;width:100%;padding:13px;margin:8px 0;background:#4788f5;color:white;border:0;border-radius:9px;font-weight:bold">🔗 Google Drive verbinden</button>
-<button onclick="disconnectCoreDrive()" class="secondary">Verbindung trennen</button>
-<p style="font-size:.88em">Die Anmeldung funktioniert erst mit einer registrierten HTTPS-Webadresse und einer Google OAuth Web-Client-ID. Beim Öffnen als lokale HTML-Datei ist nur der manuelle Export möglich. Die App fordert aktuell umfassenden Drive-Zugriff an; bitte nur bewusst freigeben.</p>
-</div>
-<div aria-label="Google-Drive-Ordner" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">
-<a href="https://drive.google.com/drive/folders/1vQP-sqMpYAOvcTzxrfRM6aDuRUPim2of" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 CORE SAMMLUNG ↗</a>
-<a href="https://drive.google.com/drive/folders/1C96O6ON9epnQr5TOFVakKCnMvTBnrTDW" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 01_EINGANG ↗</a>
-<a href="https://drive.google.com/drive/folders/1qIqP94gjGowEcAxjq9qgJQb0-alGYCpj" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 02_PRUEFUNG ↗</a>
-<a href="https://drive.google.com/drive/folders/1RpoCg9TEeUWRe-5K70kIY29r7nLGemEe" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 03_FREIGEGEBEN ↗</a>
-<a href="https://drive.google.com/drive/folders/1gXUdfw3-TCvNEx6sm0Mi6CbMIMEWFmHU" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 04_ARCHIV ↗</a>
-<a href="https://drive.google.com/drive/folders/1ng_B1JcRmJ6RepIcAF2UKkgmQYFByJm5" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 12px;border:1px solid #89a9d8;border-radius:8px;color:#fff;text-decoration:none;background:#29466b">📂 05_BACKUP ↗</a>
-</div>
-
-<p style="font-size:0.9em">Ohne Google-Verbindung erstellen die Buttons eine JSON-Datei und öffnen, falls unterstützt, das iPhone-Teilen-Menü. Wähle dort Google Drive und den Ordner 01_EINGANG. Kein direkter Upload und keine Upload-Bestätigung.</p>
-<p>Ohne Google-Verbindung: manueller Export. Mit autorisierter HTTPS-Verbindung: direkter Upload möglich. „Exportiert“ bedeutet nicht „in Drive gespeichert“.</p>
-<label for="driveStatus">Status:</label><select id="driveStatus"><option value="01_EINGANG">01_EINGANG</option><option value="02_PRUEFUNG">02_PRUEFUNG</option><option value="03_FREIGEGEBEN">03_FREIGEGEN</option><option value="04_ARCHIV">04_ARCHIV</option></select>
-<button onclick="setDriveStatus()">Ausgewählte Einträge zuordnen</button>
-<button onclick="exportDriveFolder()">Status als JSON exportieren</button>
-<button onclick="exportDriveAll()">Gesamtsicherung exportieren</button>
-<button onclick="shareAllNewToDrive()">☁️ Alle neuen Einträge sichern</button>
-<button onclick="document.getElementById('driveImport').click()">Sicherung importieren</button>
-<input type="file" id="driveImport" accept=".json,application/json" style="display:none" onchange="importDriveBackup(event)">
-<button onclick="openDrivePanel()">Schließen</button>
-<p id="driveSummary"></p><small>Nach Export über Teilen / In Dateien sichern nach Google Drive → CORE SAMMLUNG → entsprechenden Ordner verschieben. Vor Import wird eine lokale Sicherung heruntergeladen. Freigabe ist eine organisatorische Kennzeichnung, keine CORE-LAB-Freigabe.</small>
+  <section id="collectionPanel" style="display:none;margin:16px;padding:18px;border:1px solid #5470a0;border-radius:12px;background:#18253a;color:#fff">
+<h2>📦 Lokale Sammlung · Quarantäne</h2>
+<p>Einträge bleiben in diesem Browser. Regelmäßig eine JSON-Sicherung exportieren.</p>
+<label for="collectionStatus">Zielstatus / Exportfilter:</label>
+<select id="collectionStatus"><option value="01_EINGANG">01_EINGANG · Quarantäne</option><option value="02_PRUEFUNG">02_PRUEFUNG</option><option value="03_FREIGEGEBEN">03_FREIGEGEBEN</option><option value="04_ARCHIV">04_ARCHIV</option></select>
+<button onclick="setCollectionStatus()">Alle Eingangseinträge dem Zielstatus zuordnen</button>
+<button onclick="exportCollectionFolder()">Status als JSON exportieren</button>
+<button onclick="exportCollectionAll()">Gesamtsicherung exportieren</button>
+<button onclick="document.getElementById('collectionImport').click()">JSON-Sicherung importieren</button>
+<input type="file" id="collectionImport" accept=".json,application/json" onchange="importCollectionBackup(event)">
+<button onclick="openCollectionPanel()">Schließen</button>
+<p id="collectionSummary"></p>
+<small>Die Zuordnung betrifft alle Eingangseinträge, unabhängig vom Suchfilter. „Freigegeben“ ist nur eine organisatorische Kennzeichnung. Vor einem Import wird ein Sicherungsdownload ausgelöst; bitte den Download prüfen. Vorhandene IDs bleiben unverändert. Gleicher Inhalt mit anderen IDs bleibt erhalten. Löschen ist endgültig.</small>
 </section>
   <div class="layout">
     <aside class="sidebar">
@@ -857,9 +839,9 @@
         4. Bestätigen → Icon erscheint auf dem Home-Screen<br><br>
         <strong>Android (Chrome):</strong><br>
         1. Diese Seite in Chrome öffnen<br>
-        2. Menü (⋮) → „App installieren“ oder „Zum Startbildschirm hinzufügen“<br>
+        2. Menü (⋮) → „Zum Startbildschirm hinzufügen“ (falls angeboten)<br>
         3. Bestätigen<br><br>
-        Danach öffnet sich die App im Vollbild ohne Browser-Leiste.
+        Die Darstellung hängt vom Browser ab. Ohne Service Worker ist kein zuverlässiger Offline-Start zugesichert.
       </div>
 
       <div class="help-box">
@@ -873,7 +855,7 @@
         • <strong>📚 Library</strong> – Gesamtübersicht aller gespeicherten Einträge (Suche, Filter, Sortierung, Statistik)<br>
         • Suche über alles<br>
         • Export als JSON oder Text<br>
-        • Alles bleibt lokal in deinem Browser
+        • Lokale Speicherung in diesem Browser (kein geräteübergreifender Abgleich)<br>• Quarantäne-Status und JSON-Sicherungsimport unter „Lokale Sammlung“<br>• OCR benötigt externe Bibliothek und Sprachdateien; Bildoriginale werden nicht archiviert
       </div>
 
       <div class="help-box">
@@ -1242,8 +1224,8 @@
               <button class="secondary small" onclick="openEdit('${item.id}')">Bearbeiten</button>
               <button class="secondary small" onclick="copyItem('${item.id}')">Kopieren</button>
               <button class="danger small" onclick="deleteItem('${item.id}')">Löschen</button>
-              <button class="secondary small" onclick="shareItemToDrive('${item.id}')">☁️ In Drive-Eingang speichern</button>
-              ${item.driveUploadedAt ? `<span class="badge" title="Von Google Drive bestätigter Upload">☁️ In Drive</span>` : (item.driveExportedAt ? `<span class="badge" title="Nur manueller Export; Upload nicht bestätigt">📤 Exportiert</span>` : ``)}
+              <button class="secondary small" onclick="exportItem('${item.id}')">📤 JSON exportieren</button>
+              <span class="badge">${escapeHtml(collectionStatusOf(item))}</span>
             </div>
           </div>`;
       }).join("");
@@ -1728,11 +1710,7 @@
 
     // ========== EXPORT / CLEAR ==========
     function exportData() {
-      const data = JSON.stringify({
-        items: state.items,
-        categories: state.categories,
-        rules: state.rules
-      }, null, 2);
+      const data = JSON.stringify(collectionPayload(state.items, '05_BACKUP'), null, 2);
       download("sammelapp-export.json", data, "application/json");
       toast("JSON exportiert");
     }
@@ -1768,97 +1746,113 @@
     }
 
 
-    // CORE DRIVE BRIDGE v0.3: reversible local export/import, no OAuth or silent sync.
-    // iPhone: native Share Sheet mit JSON-Datei; Nutzer wählt Google Drive und Zielordner selbst.
-    const CORE_DRIVE_EINGANG_URL = 'https://drive.google.com/drive/folders/1C96O6ON9epnQr5TOFVakKCnMvTBnrTDW';
-    async function shareJsonToDrive(items, filename) {
-      const payload = drivePayload(items, '01_EINGANG');
-      const json = JSON.stringify(payload, null, 2);
-      const file = new File([json], filename, {type:'application/json'});
-      if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
-        try {
-          await navigator.share({files:[file], title:'CORE SAMMLER · Eingang'});
-          toast('Teilen geöffnet/abgeschlossen. Speicherung in Drive bitte prüfen.');
-          return true;
-        } catch(e) {
-          if (e.name === 'AbortError') {toast('Teilen abgebrochen');return false;}
-          toast('Teilen nicht verfügbar – Datei wird heruntergeladen');
-        }
-      }
-      download(filename,json,'application/json');
-      toast('JSON gespeichert. Bitte über Dateien/Teilen in Google Drive → 01_EINGANG ablegen.');
-      return true;
+    // Local collection. Legacy coreDriveStatus fields remain readable to preserve existing data.
+    function exportItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      download('CORE_EINTRAG_'+String(item.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.json',
+        JSON.stringify(collectionPayload([item], collectionStatusOf(item)), null, 2), 'application/json');
+      toast('JSON-Download ausgelöst');
     }
-    // OAuth access token remains in memory; Google Identity Services manages the consent dialog.
-    const CORE_DRIVE_FOLDER_ID='1C96O6ON9epnQr5TOFVakKCnMvTBnrTDW';
-    let coreDriveToken=null, coreDriveTokenClient=null, coreDriveBusy=false;
-    function driveConnectionMessage(message){const el=document.getElementById('driveConnectionState');if(el)el.textContent=message;}
-    function coreDriveReady(){return !!coreDriveToken;}
-    function isDriveAllowedOrigin(){return location.protocol==='https:' || (location.protocol==='http:' && ['localhost','127.0.0.1'].includes(location.hostname));}
-    function connectCoreDrive(){
-      if(!isDriveAllowedOrigin()){driveConnectionMessage('Direkte Anmeldung benötigt eine HTTPS-Webadresse. Lokale HTML-Dateien unterstützen sie nicht.');return;}
-      const id=document.getElementById('googleClientId').value.trim();
-      if(!/^[\w-]+\.apps\.googleusercontent\.com$/.test(id)){driveConnectionMessage('Bitte eine gültige OAuth Web-Client-ID eingeben.');return;}
-      if(!window.google?.accounts?.oauth2){driveConnectionMessage('Google-Anmeldung nicht geladen. Internetverbindung prüfen.');return;}
-      if(!confirm('Google wird um weitreichenden Drive-Zugriff gebeten, damit die App in deinen bereits vorhandenen Ordner 01_EINGANG schreiben kann. Fortfahren?'))return;
-      coreDriveTokenClient=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive',callback:response=>{
-        if(response.error||!response.access_token){driveConnectionMessage('Google-Anmeldung fehlgeschlagen oder abgelehnt.');return;}
-        coreDriveToken=response.access_token;driveConnectionMessage('Verbunden · direkter Upload möglich, solange die Sitzung gültig ist.');
-      }});
-      coreDriveTokenClient.requestAccessToken({prompt:'consent'});
+    function openCollectionPanel() {
+      const panel = document.getElementById('collectionPanel');
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      updateCollectionSummary();
+      if (opening) requestAnimationFrame(() => panel.scrollIntoView({behavior:'smooth', block:'start'}));
     }
-    function disconnectCoreDrive(){if(coreDriveToken&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(coreDriveToken,()=>{});coreDriveToken=null;coreDriveTokenClient=null;driveConnectionMessage('Getrennt · manueller Export verfügbar');}
-    async function uploadToCoreDrive(items,filename){
-      const payload=JSON.stringify(drivePayload(items,'01_EINGANG'),null,2);
-      const metadata={name:filename,mimeType:'application/json',parents:[CORE_DRIVE_FOLDER_ID],description:'CORE SAMMLER export'};
-      const boundary='core_sammler_'+Date.now();
-      const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+payload+'\r\n--'+boundary+'--';
-      const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,parents,webViewLink',{
-        method:'POST',headers:{Authorization:'Bearer '+coreDriveToken,'Content-Type':'multipart/related; boundary='+boundary},body
+
+    function collectionStatusOf(item) {
+      return item.coreDriveStatus || '01_EINGANG';
+    }
+
+    function updateCollectionSummary() {
+      const counts = {};
+      state.items.forEach(item => {
+        const status = collectionStatusOf(item);
+        counts[status] = (counts[status] || 0) + 1;
       });
-      let data={};try{data=await res.json();}catch(e){}
-      if(!res.ok||!data.id||!Array.isArray(data.parents)||!data.parents.includes(CORE_DRIVE_FOLDER_ID)){
-        if(res.status===401) {coreDriveToken=null;driveConnectionMessage('Sitzung abgelaufen · bitte erneut verbinden.');}
-        throw Error(data.error?.message||'Upload oder Zielordner nicht bestätigt ('+res.status+')');
-      }
-      return data;
+      document.getElementById('collectionSummary').textContent =
+        'Gespeichert: ' + state.items.length + ' · ' +
+        Object.entries(counts).map(([status, count]) => status + ': ' + count).join(' · ');
     }
-    async function saveCoreDriveItems(items,filename){
-      if(coreDriveBusy){toast('Ein Upload läuft bereits');return;}
-      coreDriveBusy=true;
-      try{
-        if(coreDriveReady()){
-          const result=await uploadToCoreDrive(items,filename);
-          const now=new Date().toISOString();
-          items.forEach(item=>{item.driveUploadedAt=now;item.driveFileId=result.id;});
-          save();renderItems();updateDriveSummary();toast(items.length+' Eintrag/Einträge direkt in Drive-Eingang gespeichert');
-        }else{
-          driveConnectionMessage('Nicht verbunden · manueller Export. Für direkten Upload zuerst Google Drive verbinden.');
-          const ok=await shareJsonToDrive(items,filename);
-          if(ok){items.forEach(item=>item.driveExportedAt=new Date().toISOString());save();renderItems();updateDriveSummary();}
+
+    function setCollectionStatus() {
+      const status = document.getElementById('collectionStatus').value;
+      const items = state.items.filter(item => collectionStatusOf(item) === '01_EINGANG');
+      if (!items.length) { toast('Keine Einträge im Eingang'); return; }
+      if (!confirm(items.length + ' Eingangseinträge nach ' + status + ' verschieben?')) return;
+      items.forEach(item => { item.coreDriveStatus = status; });
+      save();
+      renderItems();
+      updateCollectionSummary();
+      toast('Status gespeichert');
+    }
+
+    function collectionPayload(items, scope) {
+      return {
+        format: 'core-sammler-local', schemaVersion: 1,
+        exportedAt: new Date().toISOString(), scope,
+        items: items.map(item => ({...item, coreDriveStatus: collectionStatusOf(item)})),
+        categories: state.categories, rules: state.rules
+      };
+    }
+
+    function exportCollectionFolder() {
+      const status = document.getElementById('collectionStatus').value;
+      const items = state.items.filter(item => collectionStatusOf(item) === status);
+      download('CORE_SAMMLUNG_' + status + '_' + new Date().toISOString().slice(0,10) + '.json',
+        JSON.stringify(collectionPayload(items, status), null, 2), 'application/json');
+      toast(items.length + ' Einträge exportiert');
+    }
+
+    function exportCollectionAll() {
+      download('CORE_SAMMLUNG_BACKUP_' + new Date().toISOString().slice(0,10) + '.json',
+        JSON.stringify(collectionPayload(state.items, '05_BACKUP'), null, 2), 'application/json');
+      toast('Gesamtsicherung exportiert');
+    }
+
+    async function importCollectionBackup(event) {
+      const file = event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) { toast('Datei zu groß (max. 20 MB)'); return; }
+      try {
+        const data = JSON.parse(await file.text());
+        // Accept v0.6.2 backups and its unversioned JSON export, without any cloud access.
+        const supported = (['core-sammler-local', 'core-sammler-drive'].includes(data?.format) &&
+          data.schemaVersion === 1) ||
+          (data && !data.format && Array.isArray(data.categories) && Array.isArray(data.rules));
+        if (!supported || !Array.isArray(data.items) || data.items.length > 100000 ||
+          data.items.some(item => !item || typeof item.id !== 'string' || typeof item.content !== 'string' ||
+            typeof item.category !== 'string' || typeof item.type !== 'string' ||
+            !Array.isArray(item.tags) || item.tags.some(tag => typeof tag !== 'string') ||
+            (item.links !== undefined && (!Array.isArray(item.links) ||
+              item.links.some(link => typeof link !== 'string'))))) {
+          throw Error('Ungültiges Sicherungsformat oder ungültige Eintragsfelder');
         }
-      }catch(e){toast('Drive-Upload fehlgeschlagen: '+e.message+' · Einträge lokal erhalten');driveConnectionMessage('Upload fehlgeschlagen · '+e.message);}
-      finally{coreDriveBusy=false;}
+        const existing = new Set(state.items.map(item => item.id));
+        const fresh = data.items.filter(item => {
+          if (existing.has(item.id)) return false;
+          existing.add(item.id);
+          return true;
+        });
+        if (!confirm(fresh.length + ' neue Einträge importieren? Bestehende IDs bleiben unverändert. Kategorien und Regeln werden nicht ersetzt.')) return;
+        exportCollectionAll();
+        // Persist before changing the live state, so storage errors leave the collection unchanged.
+        const merged = [...state.items, ...fresh];
+        localStorage.setItem('sammelapp_v2', JSON.stringify({
+          items: merged, categories: state.categories, rules: state.rules
+        }));
+        state.items = merged;
+        renderCategories();
+        renderItems();
+        updateCollectionSummary();
+        toast(fresh.length + ' Einträge importiert');
+      } catch (error) {
+        toast('Import fehlgeschlagen: ' + error.message);
+      }
     }
-    async function shareItemToDrive(id){
-      const item=state.items.find(i=>i.id===id);if(!item)return;
-      const filename='CORE_EINGANG_'+new Date().toISOString().slice(0,10)+'_'+String(item.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.json';
-      await saveCoreDriveItems([item],filename);
-    }
-    async function shareAllNewToDrive(){
-      const items=state.items.filter(i=>!i.driveUploadedAt);
-      if(!items.length){toast('Alle Einträge bereits direkt in Drive bestätigt');return;}
-      const filename='CORE_EINGANG_NEU_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
-      await saveCoreDriveItems(items,filename);
-    }
-    function openDrivePanel(){const p=document.getElementById('drivePanel');const opening=p.style.display==='none';p.style.display=opening?'block':'none';updateDriveSummary();if(opening)requestAnimationFrame(()=>p.scrollIntoView({behavior:'smooth',block:'start'}));}
-    function driveStatusOf(i){return i.coreDriveStatus||'01_EINGANG';}
-    function updateDriveSummary(){const counts={};state.items.forEach(i=>counts[driveStatusOf(i)]=(counts[driveStatusOf(i)]||0)+1);document.getElementById('driveSummary').textContent='Gespeichert: '+state.items.length+' · '+Object.entries(counts).map(([k,v])=>k+': '+v).join(' · ');}
-    function setDriveStatus(){const status=document.getElementById('driveStatus').value;const ids=state.items.filter(i=>driveStatusOf(i)==='01_EINGANG');if(!ids.length){toast('Keine Einträge im Eingang');return;}if(!confirm(ids.length+' Eingangseinträge nach '+status+' verschieben?'))return;ids.forEach(i=>i.coreDriveStatus=status);save();renderItems();updateDriveSummary();toast('Status gespeichert');}
-    function drivePayload(items,scope){return {format:'core-sammler-drive',schemaVersion:1,exportedAt:new Date().toISOString(),scope,items:items.map(i=>({...i,coreDriveStatus:driveStatusOf(i)})),categories:state.categories,rules:state.rules};}
-    function exportDriveFolder(){const status=document.getElementById('driveStatus').value;const items=state.items.filter(i=>driveStatusOf(i)===status);download('CORE_SAMMLUNG_'+status+'_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(drivePayload(items,status),null,2),'application/json');toast(items.length+' Einträge exportiert');}
-    function exportDriveAll(){download('CORE_SAMMLUNG_BACKUP_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(drivePayload(state.items,'05_BACKUP'),null,2),'application/json');toast('Gesamtsicherung exportiert');}
-    async function importDriveBackup(ev){const f=ev.target.files[0];ev.target.value='';if(!f)return;if(f.size>20*1024*1024){toast('Datei zu groß (max. 20 MB)');return;}try{const data=JSON.parse(await f.text());if(data.format!=='core-sammler-drive'||data.schemaVersion!==1||!Array.isArray(data.items)||data.items.length>100000||data.items.some(i=>!i||typeof i.content!=='string'||typeof i.id!=='string'))throw Error('Ungültiges Sicherungsformat');const existing=new Set(state.items.map(i=>i.id));const fresh=data.items.filter(i=>!existing.has(i.id));if(!confirm(fresh.length+' neue Einträge importieren? Bestehende IDs bleiben unverändert.'))return;exportDriveAll();state.items.push(...fresh);save();renderCategories();renderItems();updateDriveSummary();toast(fresh.length+' Einträge importiert');}catch(e){toast('Import fehlgeschlagen: '+e.message);}}
 
     // ========== INIT ==========
     load();
@@ -1885,6 +1879,5 @@
       });
     });
   </script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>

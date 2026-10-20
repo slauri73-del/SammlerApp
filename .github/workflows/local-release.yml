@@ -1,0 +1,14 @@
+name: Local release checks
+on:
+  pull_request:
+  push:
+    branches: [main, codex/local-v0.6.3]
+permissions:
+  contents: read
+jobs:
+  local-data-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check local data paths
+        run: node tests/local-release.mjs
